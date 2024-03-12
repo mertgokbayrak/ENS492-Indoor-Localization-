@@ -34,7 +34,7 @@ We're setting the stage with the RGB-D Dataset from Microsoft's 7-Scenes, a trea
 ## 🛠 Methodology
 
 1. **Data Mastery**: Leveraging the RGB-D Dataset 7-Scenes, we embark on a journey to encapsulate a broad spectrum of indoor scenarios.
-2. **Architectural Innovation**: Our experimental odyssey explores the realms of YOLO, VGG, and AlexNet, each a contender in the arena of image processing prowess.
+2. **Architectural Innovation**: Our experimental odyssey explores the realms of YOLO, VGG, and AlexNet, each a contender in the arena of image processing prowess. Employing transfer learning to adapt pre-trained CNN architectures for room classification and precise localization.
 3. **Pose Revelation**: Beyond mere localization, we delve into the realm of pose estimation, charting the robot's orientation with finesse.
 4. **Prototype Realization**: The culmination of our efforts materializes as a tangible prototype, a testament to our dedication and a beacon for future exploration.
 
