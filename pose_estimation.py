@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 from torchvision.models import resnet18, ResNet18_Weights
+from sklearn.model_selection import KFold
 
 
 class Frame:
@@ -157,43 +158,142 @@ def calculate_translation_error(pred, target):
     return torch.norm(pred - target, dim=1).mean()
 
 
-# Training loop
-for epoch in tqdm(range(10), desc="Epochs Progress"):  # 8 epochs
-    pose_model.train()
-    total_loss = 0.0
-    total_translation_error = 0.0
-    total_rotation_error = 0.0
+n_splits = 5
+num_epochs = 12
 
-    for images, translations, rotations in tqdm(train_loader, desc=f"Training Epoch {epoch + 1}", leave=False):
+dataset_size = len(train_loader.dataset)  # warning is disregarded, since the code works correct
+best_fold = 0
+best_loss = 0.0
+best_model_state = None  # To store the state of the best model
+kfold = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+indices = range(dataset_size)
+
+for fold, (train_idx, val_idx) in enumerate(kfold.split(indices)):
+    print("-" * 100)
+    print(f"FOLD {fold}")
+    print("-" * 100)
+
+    train_subsampler = torch.utils.data.SubsetRandomSampler(train_idx)
+    validation_subsampler = torch.utils.data.SubsetRandomSampler(val_idx)
+
+    current_train_loader = torch.utils.data.DataLoader(
+        train_loader.dataset, batch_size=64, sampler=train_subsampler)
+    current_validation_loader = torch.utils.data.DataLoader(
+        train_loader.dataset, batch_size=64, sampler=validation_subsampler)
+
+    best_loss = np.inf
+    best_epoch = -1
+    for epoch in tqdm(range(num_epochs), desc="Epochs Progress"):
+        pose_model.train()
+        total_loss = 0.0
+        total_translation_error = 0.0
+        total_rotation_error = 0.0
+
+        # Training loop
+        for images, translations, rotations in tqdm(current_train_loader,
+                                                    desc=f"Training Epoch {epoch + 1}", leave=False):
+            images = images.to(device)
+            translations = translations.to(device)
+            rotations = rotations.view(-1, 3, 3).to(device)
+
+            optimizer.zero_grad()
+            trans_pred, rot_pred = pose_model(images)
+            rot_pred = rot_pred.view(-1, 3, 3)
+
+            loss_translation = criterion(trans_pred, translations)
+            loss_rotation = criterion(rot_pred.view(-1, 9), rotations.view(-1, 9))
+            loss = loss_translation + loss_rotation
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+            translation_error = calculate_translation_error(trans_pred, translations)
+            total_translation_error += translation_error.item()
+            rotation_error_batch = rotation_error(rot_pred, rotations).mean().item()
+            total_rotation_error += rotation_error_batch
+
+        # Validation loop
+        pose_model.eval()
+        validation_loss = 0.0
+        with torch.no_grad():
+            for images, translations, rotations in tqdm(current_validation_loader, desc=f"Validating Epoch {epoch + 1}",
+                                                        leave=False):
+                images = images.to(device)
+                translations = translations.to(device)
+                rotations = rotations.view(-1, 3, 3).to(device)
+
+                trans_pred, rot_pred = pose_model(images)
+                rot_pred = rot_pred.view(-1, 3, 3)
+
+                loss_translation = criterion(trans_pred, translations)
+                loss_rotation = criterion(rot_pred.view(-1, 9), rotations.view(-1, 9))
+                loss = loss_translation + loss_rotation
+                validation_loss += loss.item()
+
+        validation_loss /= len(current_validation_loader)
+
+        if validation_loss < best_loss:
+            best_loss = validation_loss
+            best_model_state = pose_model.state_dict()  # Save model state, not the model itself
+            best_fold = fold
+            print(f"New best model found in fold {fold} with validation loss {best_loss:.4f}")
+
+        average_loss = total_loss / len(train_loader)
+        average_rotation_error = total_rotation_error / len(train_loader)
+        average_translation_error = total_translation_error / len(train_loader)
+
+        print(f'Epoch {epoch + 1}, Average Loss: {average_loss:.4f}, Average Translation Error: '
+              f'{average_translation_error:.4f}, Average Rotation Error (radians): {average_rotation_error:.4f}')
+
+    print("-" * 50)
+    print(f"Training complete. Best Epoch: {best_epoch + 1} with Validation Loss: {best_loss:.4f}")
+
+# After all folds, save the best model state
+if best_model_state:
+    torch.save(best_model_state, 'best_pose_model.pth')
+    print(f"Best model from fold {best_fold} saved with loss {best_loss:.4f}")
+
+# To use the best model
+pose_model.load_state_dict(torch.load('best_pose_model.pth'))
+pose_model.eval()
+
+# Initialize metrics
+total_translation_error = 0.0
+total_rotation_error = 0.0
+count = 0
+
+# No gradient needed for evaluation
+with torch.no_grad():
+    for images, translations, rotations in test_loader:
         images = images.to(device)
         translations = translations.to(device)
         rotations = rotations.view(-1, 3, 3).to(device)  # 3x3 rotation matrices
 
-        optimizer.zero_grad()
-        # outputs = pose_model(images)
+        # Predict
         trans_pred, rot_pred = pose_model(images)
         rot_pred = rot_pred.view(-1, 3, 3)
 
-        loss_translation = criterion(trans_pred, translations)
-        loss_rotation = criterion(rot_pred.view(-1, 9), rotations.view(-1, 9))
-        loss = loss_translation + loss_rotation
-
-        loss.backward()
-        optimizer.step()
-
-        total_loss += loss.item()
+        # Calculate errors
         translation_error = calculate_translation_error(trans_pred, translations)
-        total_translation_error += translation_error.item()
         rotation_error_batch = rotation_error(rot_pred, rotations).mean().item()
+
+        # Aggregate errors
+        total_translation_error += translation_error.item()
         total_rotation_error += rotation_error_batch
+        count += 1
 
-    average_loss = total_loss / len(train_loader)
-    average_rotation_error = total_rotation_error / len(train_loader)
-    average_translation_error = total_translation_error / len(train_loader)
+    # Calculate average errors
+    average_translation_error = total_translation_error / count
+    average_rotation_error = total_rotation_error / count
 
-    print(f'Epoch {epoch + 1}, Average Loss: {average_loss:.4f}, Average Translation Error: '
-          f'{average_translation_error:.4f}, Average Rotation Error (radians): {average_rotation_error:.4f}')
+    print(f"Performance of the best model on the test data:")
+    print(f"Average Translation Error: {average_translation_error:.4f} meters")
+    print(f"Average Rotation Error (radians): {average_rotation_error:.4f}")
+    print("-" * 50)
 
-    # Epoch 15, Average Training Loss: 0.0110 = 1.1% Epoch 15, Average Validation Loss: 0.0401 = 4.01% Epoch 10,
-    # Average Loss: 0.0392 = 3.9%, Average Translation Error: 0.2662 meters, Average Rotation Error (radians):
-    #                                                                                              0.0880 = 5.04 degrees
+# Epoch 15, Average Training Loss: 0.0110 = 1.1%
+# Epoch 15, Average Validation Loss: 0.0401 = 4.01%
+# Epoch 10:
+# Average Loss: 0.0392 = 3.9%,
+# Average Translation Error: 0.2662 meters,
+# Average Rotation Error (radians): 0.0880 = 5.04 degrees
