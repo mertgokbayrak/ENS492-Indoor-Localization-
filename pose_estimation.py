@@ -58,8 +58,6 @@ def create_data_structure(data_folder):
 
 
 def create_data_structure_for_each_scene(data_folder, room_name):
-    local_train_data = []
-    local_test_data = []
     train_path = os.path.join(data_folder, room_name, 'train')
     test_path = os.path.join(data_folder, room_name, 'test')
     local_train_data = create_frame_objects(train_path, room_name, 'train')
