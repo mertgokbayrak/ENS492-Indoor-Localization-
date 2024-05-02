@@ -244,7 +244,8 @@ for scene in scenes:
             pose_model.eval()
             validation_loss = 0.0
             with torch.no_grad():
-                for images, translations, rotations in tqdm(current_validation_loader, desc=f"Validating Epoch {epoch + 1}",
+                for images, translations, rotations in tqdm(current_validation_loader,
+                                                            desc=f"Validating Epoch {epoch + 1}",
                                                             leave=False):
                     images = images.to(device)
                     translations = translations.to(device)
@@ -319,6 +320,7 @@ for scene in scenes:
         print(f"Average Rotation Error (radians) for {scene}: {average_rotation_error:.4f}")
         print("-" * 50)
 
+# Results for training the model on the whole dataset
 # Epoch 15, Average Training Loss: 0.0110 = 1.1%
 # Epoch 15, Average Validation Loss: 0.0401 = 4.01%
 # Epoch 10:
