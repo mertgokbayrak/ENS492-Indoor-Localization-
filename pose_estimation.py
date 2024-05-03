@@ -268,7 +268,6 @@ for scene in scenes:
             average_loss = total_loss / len(train_loader)
             average_rotation_error = total_rotation_error / len(train_loader)
             average_translation_error = total_translation_error / len(train_loader)
-            print(f"For {scene} in Epoch {epoch + 1}, Validation loss: {validation_loss:.4f}")
             print(f' For {scene} in Epoch {epoch + 1}, Average Loss: {average_loss:.4f}, Average Translation Error: '
                   f'{average_translation_error:.4f}, Average Rotation Error (radians): {average_rotation_error:.4f}')
 
@@ -318,21 +317,6 @@ for scene in scenes:
         print(f"Average Translation Error for {scene}: {average_translation_error:.4f} meters")
         print(f"Average Rotation Error (radians) for {scene}: {average_rotation_error:.4f}")
         print("-" * 50)
-
-# Best model for chess from fold 4 saved with loss 0.0042
-# Performance of the best model for chess on the test data:
-# Average Translation Error for chess: 0.3235 meters
-# Average Rotation Error (radians) for chess: 0.1603
-
-# Best model for fire from fold 4 saved with loss 0.0036
-# Performance of the best model for fire on the test data:
-# Average Translation Error for fire: 0.3680 meters
-# Average Rotation Error (radians) for fire: 0.3061
-
-# Best model for heads from fold 4 saved with loss 0.0040
-# Performance of the best model for heads on the test data:
-# Average Translation Error for heads: 0.2996 meters
-# Average Rotation Error (radians) for heads: 0.2350
 
 # Results for training the model on the whole dataset
 # Epoch 15, Average Training Loss: 0.0110 = 1.1%
