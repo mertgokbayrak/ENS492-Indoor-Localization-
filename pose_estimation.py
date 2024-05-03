@@ -186,7 +186,6 @@ for scene in scenes:
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
     best_fold = 0
-    best_loss = 0.0
     best_model_state = None
 
     n_splits = 5
@@ -263,22 +262,23 @@ for scene in scenes:
                 best_loss = validation_loss
                 best_model_state = pose_model.state_dict()  # Save model state, not the model itself
                 best_fold = fold
+                print()
                 print(f"New best model found for {scene} in fold {fold} with validation loss {best_loss:.4f}")
 
             average_loss = total_loss / len(train_loader)
             average_rotation_error = total_rotation_error / len(train_loader)
             average_translation_error = total_translation_error / len(train_loader)
-
-            print(f' For {scene}, epoch {epoch + 1}, Average Loss: {average_loss:.4f}, Average Translation Error: '
+            print(f' For {scene} in Epoch {epoch + 1}, Average Loss: {average_loss:.4f}, Average Translation Error: '
                   f'{average_translation_error:.4f}, Average Rotation Error (radians): {average_rotation_error:.4f}')
 
         print("-" * 50)
-        print(f"Training complete for {scene}. Best Epoch: {best_epoch + 1} with Validation Loss: {best_loss:.4f}")
+        print(f"Training complete for {scene} in Fold {fold}.")
+        print(f"(Best Epoch for Fold {fold}: {best_epoch + 1} with Validation Loss: {best_loss:.4f}")
 
     # After all folds, save the best model state
     if best_model_state:
         torch.save(best_model_state, f'best_pose_model_{scene}.pth')
-        print(f"Best model for {scene} from fold {best_fold} saved with loss {best_loss:.4f}")
+        print(f"Best model for {scene} from Fold {best_fold} saved with loss {best_loss:.4f}")
 
     # To use the best model
     pose_model.load_state_dict(torch.load(f'best_pose_model_{scene}.pth'))
@@ -313,7 +313,7 @@ for scene in scenes:
         average_translation_error = total_translation_error / count
         average_rotation_error = total_rotation_error / count
 
-        print(f"Performance of the best model for {scene} on the test data:")
+        print(f"Performance of the best model for {scene} on the test data was from Fold {best_fold}:")
         print(f"Average Translation Error for {scene}: {average_translation_error:.4f} meters")
         print(f"Average Rotation Error (radians) for {scene}: {average_rotation_error:.4f}")
         print("-" * 50)
