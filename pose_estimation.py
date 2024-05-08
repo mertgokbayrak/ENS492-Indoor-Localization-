@@ -9,6 +9,7 @@ import torch.optim as optim
 from tqdm import tqdm
 from torchvision.models import resnet18, ResNet18_Weights
 from sklearn.model_selection import KFold
+import math
 
 
 class Frame:
@@ -121,7 +122,7 @@ class PoseModel(nn.Module):
 
 
 pose_model = PoseModel().to(device)
-optimizer = optim.SGD(pose_model.parameters(), lr=0.001, momentum=0.9)
+optimizer = optim.SGD(pose_model.parameters(), lr=0.001, momentum=0.9)  # try adam optimizer
 criterion = nn.MSELoss()
 
 
@@ -164,15 +165,6 @@ def rotation_error(pred_rot, gt_rot):
 def calculate_translation_error(pred, target):
     return torch.norm(pred - target, dim=1).mean()
 
-
-# dataset_size = len(train_loader.dataset)
-# best_fold = 0
-# best_loss = 0.0
-# best_model_state = None  # To store the state of the best model
-# n_splits = 5
-# num_epochs = 12
-# kfold = KFold(n_splits=n_splits, shuffle=True, random_state=42)
-# indices = range(len(train_loader.dataset)) # warning is disregarded, since the code works correct
 
 scenes = ['chess', 'fire', 'heads', 'office', 'pumpkin', 'redkitchen', 'stairs']
 
@@ -313,6 +305,7 @@ for scene in scenes:
         # Calculate average errors
         average_translation_error = total_translation_error / count
         average_rotation_error = total_rotation_error / count
+        average_rotation_error_in_degrees = average_rotation_error * (180 / math.pi)
 
         print(f"Performance of the best model for {scene} on the test data was from Fold {best_fold}:")
         print(f"Average Translation Error for {scene}: {average_translation_error:.4f} meters")
@@ -322,17 +315,32 @@ for scene in scenes:
 # Best model for chess from fold 4 saved with loss 0.0042
 # Performance of the best model for chess on the test data:
 # Average Translation Error for chess: 0.3235 meters
-# Average Rotation Error (radians) for chess: 0.1603
+# Average Rotation Error (radians) for chess: 0.1603 = 9.18451346 degrees
 
 # Best model for fire from fold 4 saved with loss 0.0036
 # Performance of the best model for fire on the test data:
 # Average Translation Error for fire: 0.3680 meters
-# Average Rotation Error (radians) for fire: 0.3061
+# Average Rotation Error (radians) for fire: 0.3061 = 17.5382381 degrees
 
 # Best model for heads from fold 4 saved with loss 0.0040
 # Performance of the best model for heads on the test data:
 # Average Translation Error for heads: 0.2996 meters
-# Average Rotation Error (radians) for heads: 0.2350
+# Average Rotation Error (radians) for heads: 0.2350 = 13.464508 degrees
+
+# Best model for pumpkin from Fold 4 saved with loss 0.0049
+# Performance of the best model for pumpkin on the test data was from Fold 4:
+# Average Translation Error for pumpkin: 0.7383 meters
+# Average Rotation Error (radians) for pumpkin: 0.3540 = 20.282706 degrees
+
+# Best model for redkitchen from Fold 4 saved with loss 0.0035
+# Performance of the best model for redkitchen on the test data was from Fold 4:
+# Average Translation Error for redkitchen: 0.5468 meters
+# Average Rotation Error (radians) for redkitchen: 0.1735 = 9.94081775 degrees
+
+# Best model for stairs from Fold 4 saved with loss 0.0044
+# Performance of the best model for stairs on the test data was from Fold 4:
+# Average Translation Error for stairs: 0.3940 meters
+# Average Rotation Error (radians) for stairs: 0.1960 = 11.229973 degrees
 
 # Results for training the model on the whole dataset
 # Epoch 15, Average Training Loss: 0.0110 = 1.1%
