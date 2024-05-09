@@ -121,8 +121,8 @@ class PoseModel(nn.Module):
         return translation, rotation
 
 
-pose_model = PoseModel().to(device)
-optimizer = optim.SGD(pose_model.parameters(), lr=0.001, momentum=0.9)  # try adam optimizer
+# pose_model = PoseModel().to(device)
+# optimizer = optim.SGD(pose_model.parameters(), lr=0.001, momentum=0.9)  # try adam optimizer
 criterion = nn.MSELoss()
 
 
@@ -169,6 +169,9 @@ def calculate_translation_error(pred, target):
 scenes = ['chess', 'fire', 'heads', 'office', 'pumpkin', 'redkitchen', 'stairs']
 
 for scene in scenes:
+    pose_model = PoseModel().to(device)  # model re-initializes for each scene to prevent the possibility of overfitting
+    optimizer = optim.SGD(pose_model.parameters(), lr=0.001, momentum=0.9)
+
     train_data, test_data = create_data_structure_for_each_scene(your_path_to_data_folder, scene)
 
     train_dataset = CustomDataset(train_data, transform=transformations)
