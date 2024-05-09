@@ -96,12 +96,6 @@ transformations = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-# train_dataset = CustomDataset(train_data, transform=transformations)
-# test_dataset = CustomDataset(test_data, transform=transformations)
-
-# train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-# test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -255,7 +249,7 @@ for scene in scenes:
 
             if validation_loss < best_loss:
                 best_loss = validation_loss
-                best_model_state = pose_model.state_dict()  # Save model state, not the model itself
+                best_model_state = pose_model.state_dict()  # save model state not the model itself
                 best_fold = fold
                 print()
                 print(f"New best model found for {scene} in fold {fold} with validation loss {best_loss:.4f}")
@@ -271,7 +265,7 @@ for scene in scenes:
         print(f"Training complete for {scene} in Fold {fold}.")
         print(f"(Best Epoch for Fold {fold}: {best_epoch + 1} with Validation Loss: {best_loss:.4f}")
 
-    # After all folds, save the best model state
+    # after all folds save the best model path
     if best_model_state:
         torch.save(best_model_state, f'best_pose_model_{scene}.pth')
         print(f"Best model for {scene} from Fold {best_fold} saved with loss {best_loss:.4f}")
@@ -280,19 +274,17 @@ for scene in scenes:
     pose_model.load_state_dict(torch.load(f'best_pose_model_{scene}.pth'))
     pose_model.eval()
 
-    # Initialize metrics
     total_translation_error = 0.0
     total_rotation_error = 0.0
     count = 0
 
-    # No gradient needed for evaluation
+    # No gradient needed for test part
     with torch.no_grad():
         for images, translations, rotations in test_loader:
             images = images.to(device)
             translations = translations.to(device)
             rotations = rotations.view(-1, 3, 3).to(device)  # 3x3 rotation matrices
 
-            # Predict
             trans_pred, rot_pred = pose_model(images)
             rot_pred = rot_pred.view(-1, 3, 3)
 
@@ -300,7 +292,6 @@ for scene in scenes:
             translation_error = calculate_translation_error(trans_pred, translations)
             rotation_error_batch = rotation_error(rot_pred, rotations).mean().item()
 
-            # Aggregate errors
             total_translation_error += translation_error.item()
             total_rotation_error += rotation_error_batch
             count += 1
